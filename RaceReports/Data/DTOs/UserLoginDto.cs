@@ -2,7 +2,6 @@
 
 namespace RaceReports.Data.DTOs;
 
-// DTO = data som skickas IN när man loggar in
 public class UserLoginDto
 {
     [Required]

@@ -2,7 +2,6 @@
 
 namespace RaceReports.Data.DTOs;
 
-// DTO = data som skickas IN när man registrerar
 public class UserRegisterDto
 {
     [Required, MaxLength(50)]

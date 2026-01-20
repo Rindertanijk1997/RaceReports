@@ -1,9 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using RaceReports.Data;
 using RaceReports.Data.DTOs;
 using RaceReports.Data.Entities;
 using RaceReports.Data.Services;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace RaceReports.Controllers;
 
@@ -12,27 +17,24 @@ namespace RaceReports.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly RaceReportsContext _context;
+    private readonly IConfiguration _config;
 
-    public UsersController(RaceReportsContext context)
+    public UsersController(RaceReportsContext context, IConfiguration config)
     {
         _context = context;
+        _config = config;
     }
 
     // POST: api/users/register
-    // Skapar ett konto med username + password + email
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] UserRegisterDto dto)
     {
-        // Kontroll: username eller email får inte redan finnas
-        var usernameExists = await _context.Users.AnyAsync(u => u.Username == dto.Username);
-        if (usernameExists)
+        if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
             return Conflict("Username är redan upptaget.");
 
-        var emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
-        if (emailExists)
+        if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
             return Conflict("Email är redan registrerad.");
 
-        // Skapa user-entity och spara hashat lösenord
         var user = new User
         {
             Username = dto.Username,
@@ -43,7 +45,6 @@ public class UsersController : ControllerBase
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        // Returnera 201 + lite info (inte password)
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, new
         {
             user.Id,
@@ -53,34 +54,31 @@ public class UsersController : ControllerBase
     }
 
     // POST: api/users/login
-    // Krav: returnera userId när user loggar in
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] UserLoginDto dto)
     {
-        // Hämta användaren via username
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == dto.Username);
         if (user is null)
             return Unauthorized("Fel username eller lösenord.");
 
-        // Kontrollera lösenord
-        var ok = PasswordService.VerifyPassword(dto.Password, user.PasswordHash);
-        if (!ok)
+        if (!PasswordService.VerifyPassword(dto.Password, user.PasswordHash))
             return Unauthorized("Fel username eller lösenord.");
 
-        // Returnera userId (krav)
+        var token = CreateJwt(user);
+
         var response = new UserLoginResponseDto
         {
             UserId = user.Id,
-            Username = user.Username
+            Username = user.Username,
+            Token = token
         };
 
         return Ok(response);
     }
 
     // GET: api/users/{id}
-    // Inte ett krav men bra för test/debug + CreatedAtAction
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById([FromRoute] int id)
+    public async Task<IActionResult> GetById(int id)
     {
         var user = await _context.Users
             .Select(u => new { u.Id, u.Username, u.Email })
@@ -93,37 +91,25 @@ public class UsersController : ControllerBase
     }
 
     // PUT: api/users/{id}
-    // Krav: kunna uppdatera konto
+    [Authorize]
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UserUpdateDto dto)
+    public async Task<IActionResult> Update(int id, UserUpdateDto dto)
     {
-        // Krav-variant utan JWT: "inloggad userId" måste matcha kontot som uppdateras
-        if (dto.UserId != id)
+        var userIdFromToken =
+            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        if (userIdFromToken != id)
             return Forbid("Du kan bara uppdatera ditt eget konto.");
 
         var user = await _context.Users.FindAsync(id);
         if (user is null)
             return NotFound("User hittades inte.");
 
-        // Om någon försöker byta till ett username som redan finns
-        var usernameTaken = await _context.Users.AnyAsync(u => u.Username == dto.Username && u.Id != id);
-        if (usernameTaken)
-            return Conflict("Username är redan upptaget.");
-
-        // Om någon försöker byta till en email som redan finns
-        var emailTaken = await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != id);
-        if (emailTaken)
-            return Conflict("Email är redan registrerad.");
-
-        // Uppdatera fälten
         user.Username = dto.Username;
         user.Email = dto.Email;
 
-        // Om man skickar nytt lösenord → uppdatera hash
         if (!string.IsNullOrWhiteSpace(dto.NewPassword))
-        {
             user.PasswordHash = PasswordService.HashPassword(dto.NewPassword);
-        }
 
         await _context.SaveChangesAsync();
 
@@ -131,12 +117,14 @@ public class UsersController : ControllerBase
     }
 
     // DELETE: api/users/{id}
-    // Krav: kunna ta bort konto
+    [Authorize]
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete([FromRoute] int id, [FromQuery] int userId)
+    public async Task<IActionResult> Delete(int id)
     {
-        // Krav-variant utan JWT: bara inloggad user kan ta bort sig själv
-        if (userId != id)
+        var userIdFromToken =
+            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        if (userIdFromToken != id)
             return Forbid("Du kan bara ta bort ditt eget konto.");
 
         var user = await _context.Users.FindAsync(id);
@@ -147,5 +135,35 @@ public class UsersController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    // JWT 
+    private string CreateJwt(User user)
+    {
+        var key = _config["Jwt:Key"]!;
+        var issuer = _config["Jwt:Issuer"]!;
+        var audience = _config["Jwt:Audience"]!;
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.Username)
+        };
+
+        var securityKey =
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+
+        var creds =
+            new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(2),
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

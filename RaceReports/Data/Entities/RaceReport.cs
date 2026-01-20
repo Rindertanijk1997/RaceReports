@@ -14,7 +14,6 @@ public class RaceReport
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // ✅ LÄGG TILL DENNA
     public DateTime? UpdatedAt { get; set; }
 
     public int UserId { get; set; }

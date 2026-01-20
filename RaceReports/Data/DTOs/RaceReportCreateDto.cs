@@ -5,7 +5,7 @@ namespace RaceReports.Data.DTOs;
 public class RaceReportCreateDto
 {
     [Required]
-    public int UserId { get; set; }   // "inloggad användare"
+    public int UserId { get; set; }   
 
     [Required, MaxLength(120)]
     public string Title { get; set; } = string.Empty;

@@ -18,25 +18,24 @@ public class CommentsController : ControllerBase
     }
 
     // POST: api/comments
-    // Inloggad user kan kommentera andras inlägg (inte sina egna)
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CommentCreateDto dto)
     {
-        // 1) Kontrollera att användaren finns
+        // Kontrollera att användaren finns
         var userExists = await _context.Users.AnyAsync(u => u.Id == dto.UserId);
         if (!userExists)
             return Unauthorized("Ogiltig användare.");
 
-        // 2) Hämta inlägget som ska kommenteras
+        // Hämta inlägget som ska kommenteras
         var report = await _context.RaceReports.FirstOrDefaultAsync(r => r.Id == dto.RaceReportId);
         if (report is null)
             return NotFound("Inlägget hittades inte.");
 
-        // 3) Stoppa kommentar på eget inlägg (KRAV)
+
         if (report.UserId == dto.UserId)
             return BadRequest("Du kan inte kommentera ditt eget inlägg.");
 
-        // 4) Skapa kommentaren
+        // Skapa kommentaren
         var comment = new Comment
         {
             UserId = dto.UserId,
@@ -59,7 +58,6 @@ public class CommentsController : ControllerBase
     }
 
     // GET: api/comments/report/5
-    // Alla kan läsa kommentarer för ett specifikt inlägg (bra för test)
     [HttpGet("report/{reportId:int}")]
     public async Task<IActionResult> GetByReport(int reportId)
     {
@@ -82,7 +80,6 @@ public class CommentsController : ControllerBase
     }
 
     // GET: api/comments/10
-    // Hjälpmetod för CreatedAtAction
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {

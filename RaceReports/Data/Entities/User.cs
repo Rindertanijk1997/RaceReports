@@ -7,15 +7,15 @@ public class User
     // Primärnyckel i databasen
     public int Id { get; set; }
 
-    // Användarnamn (måste finnas)
+    // Användarnamn 
     [Required, MaxLength(50)]
     public string Username { get; set; } = string.Empty;
 
-    // Lösenord (sparas som hash)
+    // Lösenord 
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
-    // Email (unik)
+    // Email 
     [Required]
     public string Email { get; set; } = string.Empty;
 

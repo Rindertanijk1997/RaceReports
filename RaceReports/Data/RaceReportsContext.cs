@@ -16,7 +16,7 @@ public class RaceReportsContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // ✅ Seed av kategorier
+        // Seed av kategorier
         modelBuilder.Entity<RaceCategory>().HasData(
             new RaceCategory { Id = 1, Name = "5K" },
             new RaceCategory { Id = 2, Name = "10K" },
@@ -25,11 +25,10 @@ public class RaceReportsContext : DbContext
             new RaceCategory { Id = 5, Name = "Trail" }
         );
 
-        // ✅ Unika index (bra att ha)
+        // Unika index 
         modelBuilder.Entity<User>().HasIndex(u => u.Username).IsUnique();
         modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
 
-        // ✅ FIX för "multiple cascade paths" i SQL Server:
         // När en User tas bort och en RaceReport tas bort kan båda försöka cascade:a Comments.
         // Vi stänger av cascade på Comments-relationerna och kräver att man raderar Comments först (eller manuellt).
 
@@ -43,7 +42,7 @@ public class RaceReportsContext : DbContext
             .HasOne(c => c.RaceReport)
             .WithMany(r => r.Comments)
             .HasForeignKey(c => c.RaceReportId)
-            .OnDelete(DeleteBehavior.Cascade); // eller Restrict om du vill vara extra strikt
+            .OnDelete(DeleteBehavior.Cascade); 
     }
 }
 

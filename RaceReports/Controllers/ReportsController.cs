@@ -18,7 +18,6 @@ public class ReportsController : ControllerBase
     }
 
     // GET: api/reports
-    // Alla får läsa alla rapporter
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -31,6 +30,7 @@ public class ReportsController : ControllerBase
                 r.Title,
                 r.Text,
                 r.CreatedAt,
+                r.CategoryId,                 
                 User = r.User!.Username,
                 Category = r.Category!.Name
             })
@@ -38,6 +38,7 @@ public class ReportsController : ControllerBase
 
         return Ok(reports);
     }
+
 
     // GET: api/reports/{id}
     [HttpGet("{id:int}")]
@@ -51,10 +52,10 @@ public class ReportsController : ControllerBase
                 r.Title,
                 r.Text,
                 r.CreatedAt,
+                r.CategoryId,
                 User = r.User!.Username,
                 Category = r.Category!.Name,
 
-                // ✅ Lägg till kommentarer HÄR
                 Comments = r.Comments
                     .OrderBy(c => c.CreatedAt)
                     .Select(c => new
@@ -80,12 +81,12 @@ public class ReportsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(RaceReportCreateDto dto)
     {
-        // 1) Kontrollera att user finns
+        // Kontrollera att user finns
         var userExists = await _context.Users.AnyAsync(u => u.Id == dto.UserId);
         if (!userExists)
             return Unauthorized("Ogiltig användare.");
 
-        // 2) Kategori – null-safe & trim
+        
         var input = dto.Category?.Trim();
 
         if (string.IsNullOrWhiteSpace(input))
@@ -97,7 +98,7 @@ public class ReportsController : ControllerBase
         if (category is null)
             return BadRequest("Ogiltig kategori. Tillåtna värden: 5K, 10K, Halvmaraton, Maraton, Trail.");
 
-        // 3) Skapa report
+        // Skapa report
         var report = new RaceReport
         {
             Title = dto.Title,
@@ -123,7 +124,6 @@ public class ReportsController : ControllerBase
 
 
     // PUT: api/reports/{id}
-    // Bara skaparen får uppdatera
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, RaceReportUpdateDto dto)
     {
@@ -145,7 +145,6 @@ public class ReportsController : ControllerBase
     }
 
     // DELETE: api/reports/{id}?userId=1
-    // Bara skaparen får ta bort
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, [FromQuery] int userId)
     {
@@ -192,11 +191,10 @@ public class ReportsController : ControllerBase
 
 
     // GET: api/reports/mine?userId=2
-    // Visar alla inlägg som tillhör en "inloggad" användare
+    // Visar alla inlägg som tillhör en användare
     [HttpGet("mine")]
     public async Task<IActionResult> GetMine([FromQuery] int userId)
     {
-        // Om userId saknas eller är 0
         if (userId <= 0)
             return BadRequest("userId krävs.");
 
