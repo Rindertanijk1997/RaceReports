@@ -1,0 +1,90 @@
+﻿@page "/reports/new"
+@inject ReportsApi Api
+@inject AuthState Auth
+
+<h1>Skapa report</h1>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p style="white-space:pre-wrap;">@message</p>
+}
+
+<div style="max-width:520px; display:grid; gap:10px;">
+    <label>
+        Titel
+        <input @bind="title" style="width:100%; padding:10px;" />
+    </label>
+
+    <label>
+        Kategori
+        <input @bind="category" placeholder="t.ex. Maraton" style="width:100%; padding:10px;" />
+    </label>
+
+    <label>
+        Text
+        <textarea @bind="text" style="width:100%; padding:10px; min-height:140px;"></textarea>
+    </label>
+
+    <button type="button" @onclick="Create" style="padding:10px 14px;">Spara</button>
+    <a href="/reports">← Tillbaka</a>
+</div>
+
+@code {
+    private string title = "";
+    private string category = "";
+    private string text = "";
+    private string message = "";
+
+    private async Task Create()
+    {
+        message = "";
+
+        if (!Auth.IsLoggedIn || Auth.UserId is null)
+        {
+            message = "Du måste vara inloggad för att skapa ett inlägg.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            message = "Titel krävs.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            message = "Text krävs.";
+            return;
+        }
+
+        try
+        {
+            var payload = new CreateReportDto
+            {
+                title = title,
+                category = category,
+                text = text,
+                userId = Auth.UserId.Value   // 👈 DETTA ÄR HELA FIXEN
+            };
+
+            var res = await Api.Create(payload);
+
+            if (res.IsSuccessStatusCode)
+            {
+                message = "Sparad ✅ (gå tillbaka till listan)";
+                title = "";
+                category = "";
+                text = "";
+            }
+            else
+            {
+                var body = await res.Content.ReadAsStringAsync();
+                message = $"Kunde inte spara. Status {(int)res.StatusCode}\n{body}";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+    }
+}

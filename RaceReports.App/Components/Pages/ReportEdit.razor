@@ -1,0 +1,141 @@
+﻿@page "/reports/{id:int}/edit"
+@inject ReportsApi Api
+@inject AuthState Auth
+
+<a href="@($"/reports/{id}")">← Tillbaka</a>
+
+<h1>Edit report</h1>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p style="white-space:pre-wrap;">@message</p>
+}
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <p style="color:crimson; white-space:pre-wrap;">@error</p>
+}
+
+@if (loading)
+{
+    <p>Laddar...</p>
+}
+else
+{
+    <div style="max-width:520px; display:grid; gap:10px;">
+        <label>
+            Titel
+            <input @bind="title" style="width:100%; padding:10px;" />
+        </label>
+
+        <label>
+            CategoryId (t.ex. 1-5)
+            <input type="number" @bind="categoryId" style="width:100%; padding:10px;" />
+        </label>
+
+        <label>
+            Text
+            <textarea @bind="text" style="width:100%; padding:10px; min-height:140px;"></textarea>
+        </label>
+
+        <button type="button" @onclick="Save" style="padding:10px 14px;">Spara ändringar</button>
+    </div>
+}
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    private bool loading = true;
+    private string title = "";
+    private int categoryId = 1;
+    private string text = "";
+    private string message = "";
+    private string error = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        message = "";
+        error = "";
+        loading = true;
+
+        try
+        {
+            var r = await Api.GetById(id);
+            if (r is null)
+            {
+                error = "Hittade inte report.";
+                return;
+            }
+
+            title = r.title ?? "";
+            text = r.text ?? "";
+
+            // Om din GetById inte returnerar categoryId så får du sätta manuellt.
+            // Om den gör det (t.ex. r.categoryId), använd den:
+            if (r.categoryId is int cid && cid > 0)
+                categoryId = cid;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task Save()
+    {
+        message = "";
+        error = "";
+
+        if (!Auth.IsLoggedIn || Auth.UserId is null)
+        {
+            error = "Du måste vara inloggad för att uppdatera.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            message = "Titel krävs.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            message = "Text krävs.";
+            return;
+        }
+
+        if (categoryId <= 0)
+        {
+            message = "CategoryId krävs.";
+            return;
+        }
+
+        try
+        {
+            var payload = new UpdateReportDto
+            {
+                title = title,
+                text = text,
+                categoryId = categoryId,
+                userId = Auth.UserId.Value
+            };
+
+            var res = await Api.Update(id, payload);
+
+            if (res.IsSuccessStatusCode)
+                message = "Sparad ✅";
+            else
+            {
+                var body = await res.Content.ReadAsStringAsync();
+                error = $"Kunde inte spara. Status {(int)res.StatusCode}\n{body}";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

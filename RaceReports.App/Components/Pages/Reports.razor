@@ -1,0 +1,236 @@
+﻿@page "/reports"
+@rendermode InteractiveServer
+@inject ReportsApi Api
+@inject AuthState Auth
+
+<h1>Reports</h1>
+
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0;">
+    <input @bind="search"
+           placeholder="Sök titel..."
+           style="padding:10px; width:260px;" />
+
+    <select @bind="selectedCategory" style="padding:10px;">
+        <option value="">Alla kategorier</option>
+        @if (categories is not null)
+        {
+            @foreach (var c in categories)
+            {
+                <option value="@c.id">@c.name</option>
+            }
+        }
+    </select>
+
+    <button type="button" @onclick="Search" style="padding:10px 14px;">Sök</button>
+    <button type="button" @onclick="Load" style="padding:10px 14px;">Uppdatera</button>
+
+    @if (Auth.IsLoggedIn)
+    {
+        <a href="/reports/new" style="margin-left:auto;">+ Skapa report</a>
+    }
+</div>
+
+@if (!Auth.IsLoggedIn)
+{
+    <div style="border:1px solid #eee; border-radius:12px; padding:12px; max-width:760px; margin-bottom:12px;">
+        <strong>Ej inloggad</strong>
+        <p style="margin-top:8px;">
+            Du kan läsa reports, men måste vara inloggad för att skapa, redigera eller ta bort.
+        </p>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p style="white-space:pre-wrap;">@message</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <p style="color:crimson; white-space:pre-wrap;">@error</p>
+}
+
+@if (reports is null)
+{
+    <p>Laddar...</p>
+}
+else if (reports.Count == 0)
+{
+    <p>Inga träffar.</p>
+}
+else
+{
+    <ul style="display:grid; gap:10px; padding-left:0; list-style:none; max-width:760px;">
+        @foreach (var r in reports)
+        {
+            <li style="border:1px solid #eee; border-radius:12px; padding:12px;
+                               display:flex; justify-content:space-between; align-items:center;">
+
+                <div>
+                    <strong>@(r.title ?? "(utan titel)")</strong><br />
+                    <small>
+                        @(r.category ?? "-") · @(r.user ?? "-")
+                        @if (r.createdAt is not null)
+                        {
+                            <span> · @r.createdAt.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                        }
+                    </small>
+                </div>
+
+                <div style="display:flex; gap:10px; align-items:center;">
+                    @if (r.id is int id)
+                    {
+                        <a href="@($"/reports/{id}")">Öppna</a>
+
+                        @if (Auth.IsLoggedIn)
+                        {
+                            <a href="@($"/reports/{id}/edit")" @onclick:stopPropagation="true">Edit</a>
+
+                            <button type="button"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => AskDelete(id)">
+                                Ta bort
+                            </button>
+                        }
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@if (pendingDeleteId is not null)
+{
+    <div style="max-width:760px; margin-top:12px; border:1px solid #f3caca; border-radius:12px; padding:12px;">
+        <strong>Ta bort report?</strong>
+        <p style="margin-top:8px;">Detta går inte att ångra.</p>
+
+        <div style="display:flex; gap:10px; margin-top:12px;">
+            <button type="button" @onclick="ConfirmDelete">Ja, ta bort</button>
+            <button type="button" @onclick="CancelDelete">Avbryt</button>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ReportDto>? reports;
+    private List<CategoryDto>? categories;
+
+    private string search = "";
+    private string selectedCategory = "";
+
+    private string message = "";
+    private string error = "";
+    private int? pendingDeleteId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+        await Load();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            categories = await Api.GetCategories() ?? new();
+        }
+        catch
+        {
+            categories = new();
+        }
+    }
+
+    private async Task Load()
+    {
+        message = "";
+        error = "";
+        reports = null;
+
+        try
+        {
+            reports = await Api.GetAll() ?? new();
+        }
+        catch (Exception ex)
+        {
+            error = ex.ToString();
+            reports = new();
+        }
+    }
+
+    private async Task Search()
+    {
+        message = "";
+        error = "";
+        reports = null;
+
+        int? categoryId =
+            int.TryParse(selectedCategory, out var parsed) ? parsed : null;
+
+        try
+        {
+            reports = await Api.Search(search, categoryId) ?? new();
+        }
+        catch (Exception ex)
+        {
+            error = ex.ToString();
+            reports = new();
+        }
+    }
+
+    private void AskDelete(int id)
+    {
+        message = "";
+        error = "";
+
+        if (!Auth.IsLoggedIn || Auth.UserId is null)
+        {
+            message = "Du måste vara inloggad för att ta bort.";
+            return;
+        }
+
+        pendingDeleteId = id;
+        message = $"Valt för borttagning: {id}";
+    }
+
+    private void CancelDelete()
+    {
+        pendingDeleteId = null;
+        message = "Avbruten.";
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (!Auth.IsLoggedIn || pendingDeleteId is null || Auth.UserId is null)
+        {
+            error = "Saknar inloggning/UserId. Logga ut/in igen.";
+            pendingDeleteId = null;
+            return;
+        }
+
+        message = $"Tar bort id: {pendingDeleteId.Value}...";
+        error = "";
+        StateHasChanged();
+
+        try
+        {
+            var res = await Api.Delete(pendingDeleteId.Value, Auth.UserId.Value);
+            var body = await res.Content.ReadAsStringAsync();
+
+            if (res.IsSuccessStatusCode)
+            {
+                message = "Borttagen ✅";
+                pendingDeleteId = null;
+                await Load();
+            }
+            else
+            {
+                error = $"DELETE misslyckades. Status {(int)res.StatusCode}\n{body}";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.ToString();
+        }
+    }
+}

@@ -1,0 +1,116 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+@implements IDisposable
+@inject HttpClient Http
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+<h1>Login</h1>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p style="white-space:pre-wrap;">@message</p>
+}
+
+@if (Auth.IsLoggedIn)
+{
+    <p>Du är inloggad ✅ (UserId: @Auth.UserId)</p>
+    <button type="button" @onclick="Logout" style="padding:10px 14px;">Logga ut</button>
+}
+else
+{
+    <div style="max-width:420px; display:grid; gap:10px;">
+        <label>
+            Email / Username
+            <input @bind="username" style="width:100%; padding:10px;" />
+        </label>
+
+        <label>
+            Password
+            <input type="password" @bind="password" style="width:100%; padding:10px;" />
+        </label>
+
+        <button type="button" @onclick="DoLogin" style="padding:10px 14px;">
+            Logga in
+        </button>
+        <a href="/register">Skapa konto</a>
+
+    </div>
+}
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string message = "";
+
+    private const string LoginEndpoint = "api/users/login";
+
+    protected override void OnInitialized()
+    {
+        Auth.OnChange += HandleAuthChanged;
+    }
+
+    private void HandleAuthChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Auth.OnChange -= HandleAuthChanged;
+    }
+
+    private async Task DoLogin()
+    {
+        message = "Kör login...";
+        StateHasChanged();
+
+        try
+        {
+            var res = await Http.PostAsJsonAsync(LoginEndpoint, new LoginRequest(username, password));
+
+            if (!res.IsSuccessStatusCode)
+            {
+                var body = await res.Content.ReadAsStringAsync();
+                message = $"Login misslyckades. Status {(int)res.StatusCode}\n{body}";
+                return;
+            }
+
+            var json = await res.Content.ReadFromJsonAsync<LoginResponse>();
+
+            var token = json?.token ?? json?.accessToken;
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                message = "Login OK men token saknas i svaret.";
+                return;
+            }
+
+            if (json?.userId is null)
+            {
+                message = "Login OK men userId saknas i svaret.";
+                return;
+            }
+
+            Auth.SetAuth(token, json.userId);
+            message = "Inloggad ✅";
+            Nav.NavigateTo("/reports", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            message = $"Exception:\n{ex}";
+        }
+    }
+
+    private void Logout()
+    {
+        Auth.Logout();
+        message = "Utloggad.";
+    }
+
+    private sealed record LoginRequest(string username, string password);
+
+    private sealed class LoginResponse
+    {
+        public string? token { get; set; }
+        public string? accessToken { get; set; }
+        public int? userId { get; set; }
+    }
+}

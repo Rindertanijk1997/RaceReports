@@ -1,0 +1,19 @@
+﻿@using Microsoft.AspNetCore.Components.Routing
+@rendermode InteractiveServer
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+
+    <NotFound>
+        <h1>Blazor 404</h1>
+        <p>Router kör, men ingen route matchade.</p>
+        <p>URL: @Nav.Uri</p>
+    </NotFound>
+</Router>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+}

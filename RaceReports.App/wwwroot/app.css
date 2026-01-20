@@ -1,0 +1,280 @@
+/* ====== Neutral luxury theme ====== */
+:root {
+    --bg: #f3f4f2; /* warm stone */
+    --surface: rgba(255,255,255,.85);
+    --surface-solid: #ffffff;
+    --text: #1c1f24; /* deep charcoal */
+    --muted: #6b7280; /* soft gray */
+
+    --border: rgba(28,31,36,.10);
+    --accent: #7a8f85; /* sage */
+    --accent-soft: #e6ebe8;
+    --accent-warm: #c2b59b; /* champagne */
+
+    --danger: #9b1c1c;
+    --radius: 16px;
+    --radius-sm: 12px;
+    --shadow: 0 18px 45px rgba(28,31,36,.08);
+    --shadow-sm: 0 8px 24px rgba(28,31,36,.06);
+    --ring: 0 0 0 3px rgba(122,143,133,.25);
+}
+
+/* ====== Base ====== */
+html, body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    background: radial-gradient(900px 500px at 85% -10%, rgba(194,181,155,.18), transparent 55%), radial-gradient(800px 500px at 10% 0%, rgba(122,143,133,.14), transparent 60%), linear-gradient(180deg, #fafafa 0%, var(--bg) 60%, #eceeea 100%);
+    min-height: 100%;
+}
+
+.content {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 1.2rem 1rem;
+}
+
+/* ====== Typography ====== */
+h1, h2, h3 {
+    letter-spacing: -0.02em;
+}
+
+h1 {
+    font-weight: 700;
+    font-size: clamp(1.6rem, 2vw, 2.1rem);
+    margin-bottom: 1rem;
+}
+
+small, .text-muted {
+    color: var(--muted) !important;
+}
+
+/* ====== Links ====== */
+a, .btn-link {
+    color: var(--text);
+    text-decoration: none;
+    opacity: .9;
+}
+
+    a:hover, .btn-link:hover {
+        opacity: 1;
+        text-decoration: underline;
+        text-underline-offset: 4px;
+    }
+
+/* ====== Buttons ====== */
+button, .btn {
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.9);
+    color: var(--text);
+    padding: .6rem 1.1rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+}
+
+    button:hover, .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+        background: #fff;
+    }
+
+    button:active, .btn:active {
+        transform: translateY(0);
+    }
+
+/* Primary / action button */
+.btn-primary {
+    background: linear-gradient( 135deg, var(--accent) 0%, #6f857b 100% );
+    color: #fff;
+    border: none;
+}
+
+    .btn-primary:hover {
+        filter: brightness(1.05);
+    }
+
+/* ====== Inputs ====== */
+input, textarea, select,
+.form-control, .form-check-input {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.9);
+    color: var(--text);
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+    input::placeholder, textarea::placeholder {
+        color: #9aa0a6;
+    }
+
+    input:focus, textarea:focus, select:focus,
+    .form-control:focus, button:focus {
+        outline: none;
+        border-color: rgba(122,143,133,.55);
+        box-shadow: var(--ring);
+        background: #fff;
+    }
+
+/* ====== Validation ====== */
+.valid.modified:not([type=checkbox]) {
+    border-color: rgba(34,197,94,.45);
+    box-shadow: 0 0 0 3px rgba(34,197,94,.14);
+}
+
+.invalid {
+    border-color: rgba(220,38,38,.55);
+    box-shadow: 0 0 0 3px rgba(220,38,38,.14);
+}
+
+.validation-message {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+/* ====== Cards / list items ====== */
+li,
+div[style*="border:1px solid #eee"] {
+    background: var(--surface);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+/* ====== Blazor error boundary ====== */
+.blazor-error-boundary {
+    background: linear-gradient( 135deg, #7f1d1d, #991b1b );
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    color: #fff;
+    padding: 1rem 1rem 1rem 3.7rem;
+}
+
+    .blazor-error-boundary::after {
+        content: "Ett fel inträffade.";
+        font-weight: 700;
+    }
+
+
+/* ===========================
+   LUXURY SIDEBAR / NAV (no purple)
+   =========================== */
+
+:root {
+    --obsidian: #0b0f14;
+    --obsidian-2: #0f1720;
+    --champagne: #c9b58a;
+    --champagne-2: #e7d9b5;
+    --ink: #e9edf3;
+    --ink-muted: rgba(233,237,243,.70);
+    --glass: rgba(255,255,255,.06);
+    --glass-2: rgba(255,255,255,.10);
+    --line: rgba(201,181,138,.18);
+    --shadow-lux: 0 18px 55px rgba(0,0,0,.35);
+}
+
+/* Sidebar container (Blazor template brukar ha .sidebar) */
+.sidebar {
+    background: radial-gradient(900px 500px at 30% 0%, rgba(201,181,138,.18), transparent 60%), radial-gradient(800px 500px at 80% 30%, rgba(255,255,255,.08), transparent 55%), linear-gradient(180deg, var(--obsidian) 0%, var(--obsidian-2) 100%) !important;
+    border-right: 1px solid var(--line);
+    box-shadow: var(--shadow-lux);
+}
+
+    /* Om din layout använder .navbar eller .top-row i sidomenyn */
+    .sidebar .navbar,
+    .sidebar .top-row,
+    .sidebar .navbar-nav {
+        background: transparent !important;
+    }
+
+    /* Brand / titel */
+    .sidebar .navbar-brand,
+    .navbar-brand {
+        color: var(--ink) !important;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        padding: 1rem 1rem .8rem;
+        position: relative;
+    }
+
+        /* Tunn lyx-linje under brand */
+        .sidebar .navbar-brand::after {
+            content: "";
+            display: block;
+            margin-top: .75rem;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(201,181,138,.55), transparent);
+            opacity: .9;
+        }
+
+    /* Nav links */
+    .sidebar a,
+    .sidebar .nav-link {
+        color: var(--ink-muted) !important;
+        font-weight: 600;
+        letter-spacing: .01em;
+        border-radius: 14px;
+        margin: .25rem .75rem;
+        padding: .65rem .85rem;
+        transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+
+        /* Hover = subtil glans */
+        .sidebar a:hover,
+        .sidebar .nav-link:hover {
+            color: var(--ink) !important;
+            background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.04)) !important;
+            box-shadow: 0 10px 28px rgba(0,0,0,.22);
+            transform: translateY(-1px);
+        }
+
+        /* Active link = champagne accent + elegant glow */
+        .sidebar .nav-link.active {
+            color: var(--ink) !important;
+            background: radial-gradient(600px 120px at 25% 0%, rgba(201,181,138,.22), transparent 65%), linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.06)) !important;
+            border: 1px solid rgba(201,181,138,.28);
+            box-shadow: 0 18px 45px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.06);
+        }
+
+            /* Liten “guldkant” som markerar active */
+            .sidebar .nav-link.active::before {
+                content: "";
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 999px;
+                margin-right: .55rem;
+                background: radial-gradient(circle at 30% 30%, var(--champagne-2), var(--champagne));
+                box-shadow: 0 0 0 3px rgba(201,181,138,.18);
+                vertical-align: middle;
+            }
+
+        /* Ikoner (om du har svg/bi/oi) gör dem mer premium */
+        .sidebar .nav-link svg,
+        .sidebar .nav-link .oi,
+        .sidebar .nav-link .bi {
+            opacity: .9;
+            filter: drop-shadow(0 6px 14px rgba(0,0,0,.25));
+        }
+
+/* Remove bootstrap primary purple/blue backgrounds */
+.bg-primary,
+.navbar-dark,
+.navbar {
+    background-color: transparent !important;
+}
+
+/* Make the main content feel more premium next to sidebar */
+main, .content {
+    background: transparent;
+}
+
+/* Optional: subtle selection highlight for accessibility */
+.sidebar ::selection {
+    background: rgba(201,181,138,.35);
+    color: var(--ink);
+}

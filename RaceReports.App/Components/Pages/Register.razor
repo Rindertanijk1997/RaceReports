@@ -1,0 +1,90 @@
+﻿@page "/register"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<h1>Skapa konto</h1>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p style="white-space:pre-wrap;">@message</p>
+}
+
+<div style="max-width:420px; display:grid; gap:10px;">
+    <label>
+        Username
+        <input @bind="username" style="width:100%; padding:10px;" />
+    </label>
+
+    <label>
+        Email
+        <input @bind="email" style="width:100%; padding:10px;" />
+    </label>
+
+    <label>
+        Password
+        <input type="password" @bind="password" style="width:100%; padding:10px;" />
+    </label>
+
+    <button type="button" @onclick="RegisterUser" style="padding:10px 14px;">
+        Skapa konto
+    </button>
+
+    <a href="/login">Jag har redan konto → Logga in</a>
+</div>
+
+@code {
+    private string username = "";
+    private string email = "";
+    private string password = "";
+    private string message = "";
+
+    // ÄNDRA om din backend-route skiljer sig:
+    private const string RegisterEndpoint = "api/users/register";
+
+    private async Task RegisterUser()
+    {
+        message = "";
+
+        if (string.IsNullOrWhiteSpace(username) ||
+            string.IsNullOrWhiteSpace(email) ||
+            string.IsNullOrWhiteSpace(password))
+        {
+            message = "Fyll i username, email och password.";
+            return;
+        }
+
+        try
+        {
+            var payload = new RegisterRequest
+            {
+                username = username.Trim(),
+                email = email.Trim(),
+                password = password
+            };
+
+            var res = await Http.PostAsJsonAsync(RegisterEndpoint, payload);
+
+            if (res.IsSuccessStatusCode)
+            {
+                message = "Konto skapat ✅ Gå till login.";
+                Nav.NavigateTo("/login");
+                return;
+            }
+
+            var body = await res.Content.ReadAsStringAsync();
+            message = $"Kunde inte skapa konto. Status {(int)res.StatusCode}\n{body}";
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+    }
+
+    private sealed class RegisterRequest
+    {
+        public string? username { get; set; }
+        public string? email { get; set; }
+        public string? password { get; set; }
+    }
+}

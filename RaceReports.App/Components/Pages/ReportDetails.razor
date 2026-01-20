@@ -1,0 +1,96 @@
+﻿@page "/reports/{id:int}"
+@inject ReportsApi Api
+
+<a href="/reports">← Tillbaka</a>
+
+<h1>Report</h1>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <p style="color:crimson;">@error</p>
+}
+else if (report is null)
+{
+    <p>Laddar...</p>
+}
+else
+{
+    <div style="max-width:760px; display:grid; gap:16px; margin-top:16px;">
+
+        <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
+            <strong>Titel:</strong> @(report.title ?? "(utan titel)")<br />
+            <strong>Kategori:</strong> @(report.category ?? "-")<br />
+            <strong>Skapad:</strong> @(report.createdAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")<br />
+            <strong>Användare:</strong> @(report.user ?? "-")
+        </div>
+
+        <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
+            <strong>Text</strong>
+
+            @if (string.IsNullOrWhiteSpace(report.text))
+            {
+                <p style="opacity:0.7; margin-top:8px;">(Ingen text sparad)</p>
+            }
+            else
+            {
+                <p style="white-space:pre-wrap; margin-top:8px;">@report.text</p>
+            }
+        </div>
+
+        <!-- Comments -->
+        <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
+            <strong>Kommentarer</strong>
+
+            @if (report.comments is null || report.comments.Count == 0)
+            {
+                <p style="opacity:0.7; margin-top:8px;">(Inga kommentarer)</p>
+            }
+            else
+            {
+                <ul style="list-style:none; padding-left:0; margin-top:12px; display:grid; gap:10px;">
+                    @foreach (var c in report.comments)
+                    {
+                        <li style="border:1px solid #f1f1f1; border-radius:12px; padding:10px;">
+                            <div style="display:flex; justify-content:space-between; gap:10px;">
+                                <strong>@(c.user ?? "okänd")</strong>
+                                <small>@(c.createdAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</small>
+                            </div>
+
+                            <p style="white-space:pre-wrap; margin-top:8px;">
+                                @(c.text ?? "")
+                            </p>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div style="display:flex; gap:10px;">
+            <a href="@($"/reports/{id}/edit")">Edit</a>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    private ReportDto? report;
+    private string error = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        error = "";
+        report = null;
+
+        try
+        {
+            report = await Api.GetById(id);
+            if (report is null)
+                error = "Hittade inte report (404 eller saknas endpoint).";
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+}
