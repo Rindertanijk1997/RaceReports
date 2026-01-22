@@ -1,5 +1,6 @@
 ﻿@page "/reports/{id:int}"
 @inject ReportsApi Api
+@inject AuthState Auth
 
 <a href="/reports">← Tillbaka</a>
 
@@ -48,12 +49,12 @@ else
             else
             {
                 <ul style="list-style:none; padding-left:0; margin-top:12px; display:grid; gap:10px;">
-                    @foreach (var c in report.comments)
+                    @foreach (var c in report.comments.OrderByDescending(x => x.createdAt))
                     {
                         <li style="border:1px solid #f1f1f1; border-radius:12px; padding:10px;">
                             <div style="display:flex; justify-content:space-between; gap:10px;">
                                 <strong>@(c.user ?? "okänd")</strong>
-                                <small>@(c.createdAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</small>
+                                <small>@(c.createdAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "")</small>
                             </div>
 
                             <p style="white-space:pre-wrap; margin-top:8px;">
@@ -62,6 +63,39 @@ else
                         </li>
                     }
                 </ul>
+            }
+
+            @if (Auth.IsLoggedIn)
+            {
+                <!-- Add comment -->
+                <div style="margin-top:14px; display:grid; gap:10px;">
+                    <textarea @bind-value="newComment"
+                              @bind-value:event="oninput"
+                              maxlength="500"
+                              placeholder="Skriv en kommentar..."
+                              style="width:100%; min-height:90px; padding:10px; border-radius:10px; border:1px solid #e6e6e6;"></textarea>
+
+                    <div style="display:flex; gap:10px; align-items:center;">
+
+                        <button type="button"
+                                @onclick="PostComment"
+                                style="padding:10px 14px;">
+                            @(isPosting ? "Skickar..." : "Skicka kommentar")
+                        </button>
+
+
+
+
+                        @if (!string.IsNullOrWhiteSpace(commentError))
+                        {
+                            <small style="color:crimson;">@commentError</small>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p style="opacity:0.7; margin-top:10px;"><em>Logga in för att kommentera</em></p>
             }
         </div>
 
@@ -77,9 +111,14 @@ else
     private ReportDto? report;
     private string error = "";
 
+    private string newComment = "";
+    private bool isPosting;
+    private string commentError = "";
+
     protected override async Task OnParametersSetAsync()
     {
         error = "";
+        commentError = "";
         report = null;
 
         try
@@ -91,6 +130,56 @@ else
         catch (Exception ex)
         {
             error = ex.Message;
+        }
+    }
+
+    private async Task PostComment()
+    {
+        commentError = "";
+
+        var text = (newComment ?? "").Trim();
+        if (text.Length < 2)
+        {
+            commentError = "Kommentaren är för kort.";
+            return;
+        }
+
+        int? maybeUserId = Auth.UserId;
+        if (maybeUserId is null)
+        {
+            commentError = "Du måste vara inloggad för att kommentera.";
+            return;
+        }
+
+        try
+        {
+            isPosting = true;
+
+            var res = await Api.CreateComment(new CreateCommentDto
+            {
+                UserId = maybeUserId.Value,
+                RaceReportId = report?.id ?? id,
+                Text = text
+            });
+
+
+            if (!res.IsSuccessStatusCode)
+            {
+                var body = await res.Content.ReadAsStringAsync();
+                commentError = $"Misslyckades att skicka kommentar ({(int)res.StatusCode}): {body}";
+                return;
+            }
+
+            newComment = "";
+            report = await Api.GetById(id);
+        }
+        catch (Exception ex)
+        {
+            commentError = ex.Message;
+        }
+        finally
+        {
+            isPosting = false;
         }
     }
 }

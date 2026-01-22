@@ -75,10 +75,11 @@ public class CommentDto
 
 public sealed class CreateCommentDto
 {
-    public int userId { get; set; }
-    public int reportId { get; set; }
-    public string? text { get; set; }
+    public int UserId { get; set; }
+    public int RaceReportId { get; set; }
+    public string? Text { get; set; }
 }
+
 
 
 public class CreateReportDto
