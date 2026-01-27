@@ -93,10 +93,9 @@ public class UsersController : ControllerBase
     // PUT: api/users/{id}
     [Authorize]
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, UserUpdateDto dto)
+    public async Task<IActionResult> Update(int id, [FromBody] UserUpdateDto dto)
     {
-        var userIdFromToken =
-            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userIdFromToken = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         if (userIdFromToken != id)
             return Forbid("Du kan bara uppdatera ditt eget konto.");
@@ -121,23 +120,50 @@ public class UsersController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var userIdFromToken =
-            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userIdFromToken = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         if (userIdFromToken != id)
             return Forbid("Du kan bara ta bort ditt eget konto.");
 
-        var user = await _context.Users.FindAsync(id);
+        // Ladda user + beroenden som annars stoppar DELETE via FK constraints
+        var user = await _context.Users
+            .Include(u => u.RaceReports)
+            .Include(u => u.Comments)
+            .FirstOrDefaultAsync(u => u.Id == id);
+
         if (user is null)
             return NotFound("User hittades inte.");
+
+        // 1) Ta bort kommentarer som användaren skrivit
+        if (user.Comments.Count > 0)
+            _context.Comments.RemoveRange(user.Comments);
+
+        // 2) Ta bort kommentarer på användarens reports (andra kan ha kommenterat dem)
+        if (user.RaceReports.Count > 0)
+        {
+            var reportIds = user.RaceReports.Select(r => r.Id).ToList();
+
+            var commentsOnUsersReports = await _context.Comments
+                .Where(c => reportIds.Contains(c.RaceReportId))
+                .ToListAsync();
+
+            if (commentsOnUsersReports.Count > 0)
+                _context.Comments.RemoveRange(commentsOnUsersReports);
+
+            _context.RaceReports.RemoveRange(user.RaceReports);
+        }
 
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
 
-        return NoContent();
+        return Ok(new
+        {
+            message = "Kontot har raderats"
+        });
+
     }
 
-    // JWT 
+    // JWT
     private string CreateJwt(User user)
     {
         var key = _config["Jwt:Key"]!;
@@ -150,11 +176,8 @@ public class UsersController : ControllerBase
             new Claim(ClaimTypes.Name, user.Username)
         };
 
-        var securityKey =
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
-
-        var creds =
-            new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+        var creds = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             issuer: issuer,

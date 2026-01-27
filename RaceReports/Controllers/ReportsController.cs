@@ -158,7 +158,10 @@ public class ReportsController : ControllerBase
         _context.RaceReports.Remove(report);
         await _context.SaveChangesAsync();
 
-        return NoContent();
+        return Ok(new
+        {
+            message = "Inlägget har raderats"
+        });
     }
 
     // GET: api/reports/search?title=varvet&categoryId=3
