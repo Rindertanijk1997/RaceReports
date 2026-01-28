@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RaceReports.Data;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RaceReports.Data.DTOs;
-using RaceReports.Data.Entities;
+using RaceReports.Data.Services;
+using System.Security.Claims;
 
 namespace RaceReports.Controllers;
 
@@ -10,92 +10,58 @@ namespace RaceReports.Controllers;
 [Route("api/comments")]
 public class CommentsController : ControllerBase
 {
-    private readonly RaceReportsContext _context;
+    private readonly CommentsService _commentsService;
 
-    public CommentsController(RaceReportsContext context)
+    // ✅ Service injection (INGEN DbContext)
+    public CommentsController(CommentsService commentsService)
     {
-        _context = context;
+        _commentsService = commentsService;
     }
 
+    // ============================
     // POST: api/comments
+    // ============================
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CommentCreateDto dto)
     {
-        // Kontrollera att användaren finns
-        var userExists = await _context.Users.AnyAsync(u => u.Id == dto.UserId);
-        if (!userExists)
-            return Unauthorized("Ogiltig användare.");
+        var userIdFromToken =
+            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        // Hämta inlägget som ska kommenteras
-        var report = await _context.RaceReports.FirstOrDefaultAsync(r => r.Id == dto.RaceReportId);
-        if (report is null)
-            return NotFound("Inlägget hittades inte.");
-
-
-        if (report.UserId == dto.UserId)
-            return BadRequest("Du kan inte kommentera ditt eget inlägg.");
-
-        // Skapa kommentaren
-        var comment = new Comment
+        try
         {
-            UserId = dto.UserId,
-            RaceReportId = dto.RaceReportId,
-            Text = dto.Text
-        };
+            var comment = await _commentsService.CreateAsync(dto, userIdFromToken);
 
-        _context.Comments.Add(comment);
-        await _context.SaveChangesAsync();
-
-        // Returnera 201 + kommentaren
-        return CreatedAtAction(nameof(GetById), new { id = comment.Id }, new
+            return CreatedAtAction(nameof(GetById), new { id = comment.Id }, comment);
+        }
+        catch (InvalidOperationException ex)
         {
-            comment.Id,
-            comment.Text,
-            comment.CreatedAt,
-            comment.UserId,
-            comment.RaceReportId
-        });
+            // t.ex. ogiltig användare / eget inlägg / report saknas
+            return BadRequest(ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
+    // ============================
     // GET: api/comments/report/5
+    // ============================
     [HttpGet("report/{reportId:int}")]
     public async Task<IActionResult> GetByReport(int reportId)
     {
-        var comments = await _context.Comments
-            .Where(c => c.RaceReportId == reportId)
-            .Include(c => c.User)
-            .OrderBy(c => c.CreatedAt)
-            .Select(c => new
-            {
-                c.Id,
-                c.Text,
-                c.CreatedAt,
-                User = c.User!.Username,
-                c.UserId,
-                c.RaceReportId
-            })
-            .ToListAsync();
-
+        var comments = await _commentsService.GetByReportAsync(reportId);
         return Ok(comments);
     }
 
-    // GET: api/comments/10
+    // ============================
+    // GET: api/comments/{id}
+    // ============================
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var comment = await _context.Comments
-            .Include(c => c.User)
-            .Where(c => c.Id == id)
-            .Select(c => new
-            {
-                c.Id,
-                c.Text,
-                c.CreatedAt,
-                User = c.User!.Username,
-                c.UserId,
-                c.RaceReportId
-            })
-            .FirstOrDefaultAsync();
+        var comment = await _commentsService.GetByIdAsync(id);
 
         if (comment is null)
             return NotFound();

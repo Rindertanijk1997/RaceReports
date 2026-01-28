@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RaceReports.Data;
+using RaceReports.Data.Services;
 
 namespace RaceReports.Controllers;
 
@@ -8,18 +7,19 @@ namespace RaceReports.Controllers;
 [Route("api/categories")]
 public class CategoriesController : ControllerBase
 {
-    private readonly RaceReportsContext _context;
+    private readonly CategoriesService _categoriesService;
 
-    public CategoriesController(RaceReportsContext context)
+    // ✅ Service injection (ingen DbContext i controller)
+    public CategoriesController(CategoriesService categoriesService)
     {
-        _context = context;
+        _categoriesService = categoriesService;
     }
 
     // GET: api/categories
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var categories = await _context.Categories.ToListAsync();
+        var categories = await _categoriesService.GetAllAsync();
         return Ok(categories);
     }
 }

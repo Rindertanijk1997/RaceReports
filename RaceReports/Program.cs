@@ -2,16 +2,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RaceReports.Data;
+using RaceReports.Data.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// JWT-inställningar (EFTER builder skapats)
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
 
-if (jwtKey is null)
+if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new Exception("JWT Key saknas i appsettings.json");
 }
@@ -35,13 +35,18 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// Controllers + DB
+builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<ReportsService>();
+builder.Services.AddScoped<CommentsService>();
+builder.Services.AddScoped<CategoriesService>();
+
 builder.Services.AddControllers();
+
 builder.Services.AddDbContext<RaceReportsContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -55,7 +60,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthentication(); 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
