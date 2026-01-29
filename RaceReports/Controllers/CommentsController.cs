@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using RaceReports.Data.DTOs;
+﻿using RaceReports.Data.DTOs;
 using RaceReports.Data.Services;
-using System.Security.Claims;
 
 namespace RaceReports.Controllers;
 
@@ -12,15 +9,12 @@ public class CommentsController : ControllerBase
 {
     private readonly CommentsService _commentsService;
 
-    // ✅ Service injection (INGEN DbContext)
     public CommentsController(CommentsService commentsService)
     {
         _commentsService = commentsService;
     }
 
-    // ============================
     // POST: api/comments
-    // ============================
     [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CommentCreateDto dto)
@@ -36,7 +30,6 @@ public class CommentsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            // t.ex. ogiltig användare / eget inlägg / report saknas
             return BadRequest(ex.Message);
         }
         catch (KeyNotFoundException ex)
@@ -45,9 +38,7 @@ public class CommentsController : ControllerBase
         }
     }
 
-    // ============================
     // GET: api/comments/report/5
-    // ============================
     [HttpGet("report/{reportId:int}")]
     public async Task<IActionResult> GetByReport(int reportId)
     {
@@ -55,9 +46,7 @@ public class CommentsController : ControllerBase
         return Ok(comments);
     }
 
-    // ============================
     // GET: api/comments/{id}
-    // ============================
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {

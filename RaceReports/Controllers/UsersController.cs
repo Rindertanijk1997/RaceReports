@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using RaceReports.Data.DTOs;
+﻿using RaceReports.Data.DTOs;
 using RaceReports.Data.Services;
-using System.Security.Claims;
 
 namespace RaceReports.Controllers;
 
@@ -19,6 +16,7 @@ public class UsersController : ControllerBase
         _jwtService = jwtService;
     }
 
+    // POST REGISTER
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] UserRegisterDto dto)
     {
@@ -46,6 +44,7 @@ public class UsersController : ControllerBase
         }
     }
 
+    // POST LOGIN
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] UserLoginDto dto)
     {
@@ -68,6 +67,7 @@ public class UsersController : ControllerBase
         });
     }
 
+    // GET USER BY ID
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -83,6 +83,7 @@ public class UsersController : ControllerBase
         });
     }
 
+    // UPDATE USER
     [Authorize]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UserUpdateDto dto)
@@ -109,6 +110,7 @@ public class UsersController : ControllerBase
         }
     }
 
+    // DELETE
     [Authorize]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)

@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using RaceReports.Data.DTOs;
+﻿using RaceReports.Data.DTOs;
 using RaceReports.Data.Services;
-using System.Security.Claims;
 
 namespace RaceReports.Controllers;
 
