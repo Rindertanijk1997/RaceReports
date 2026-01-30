@@ -29,7 +29,7 @@ public class RaceReportsContext : DbContext
         modelBuilder.Entity<User>().HasIndex(u => u.Username).IsUnique();
         modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
 
-        // När en User tas bort och en RaceReport tas bort kan båda försöka cascade:a Comments.
+        // När en User tas bort och en RaceReport tas bort kan båda försöka cascade Comments.
         modelBuilder.Entity<Comment>()
             .HasOne(c => c.User)
             .WithMany(u => u.Comments)

@@ -1,5 +1,5 @@
-﻿using RaceReports.Data.DTOs;
-using RaceReports.Data.Services;
+﻿using RaceReports.Core.Services;
+using RaceReports.Data.DTOs;
 
 namespace RaceReports.Controllers;
 
